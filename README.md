@@ -8,6 +8,7 @@
       2. Else, you can buy the listing
 2. Sell Page:
    1. You can list your nft on the marketplace
+   2. Withdraw proceeds
 
 Moralis:
 
