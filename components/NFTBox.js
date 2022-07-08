@@ -5,12 +5,31 @@ import nftAbi from "../constants/BasicNft.json"
 import Image from "next/image"
 import { Card } from "web3uikit"
 import { ethers } from "ethers"
+import UpdateListingModal from "./UpdateListingModal"
+
+const truncateStr = (fullStr, strLen) => {
+    if (fullStr.length <= strLen) return fullStr
+    const separator = "..."
+    let separatorLength = separator.length
+    const charsToShow = strLen - separatorLength
+    const frontChars = Math.ceil(charsToShow / 2)
+    const backChars = Math.floor(charsToShow / 2)
+    return (
+        fullStr.substring(0, frontChars) +
+        separator +
+        fullStr.substring(fullStr.length - backChars)
+    )
+}
 
 function NFTBox({ price, nftAddress, tokenId, marketplaceAddress, seller }) {
     const [imageURI, setImageUri] = useState("")
-    const { isWeb3Enabled } = useMoralis()
+    const { isWeb3Enabled, account } = useMoralis()
     const [tokenName, setTokenName] = useState("")
     const [tokenDescription, setTokenDescription] = useState("")
+    const [showModal, setShowModal] = useState(false)
+    const hideModal = () => {
+        setShowModal(false)
+    }
 
     const { runContractFunction: getTokenURI } = useWeb3Contract({
         abi: nftAbi,
@@ -24,7 +43,7 @@ function NFTBox({ price, nftAddress, tokenId, marketplaceAddress, seller }) {
     async function updateUI() {
         // get the tokenURI
         const tokenURI = await getTokenURI()
-        console.log(`The tokenURI for ${tokenId} is: ${tokenURI}`)
+        // console.log(`The tokenURI for ${tokenId} is: ${tokenURI}`)
         // using image tag from tokenURI, get the image
         if (tokenURI) {
             // use ipfs gateway
@@ -50,31 +69,56 @@ function NFTBox({ price, nftAddress, tokenId, marketplaceAddress, seller }) {
         }
     }, [isWeb3Enabled])
 
+    const isOwnedByUser = seller === account || seller === undefined
+    const formattedSellerAddress = isOwnedByUser
+        ? "You"
+        : truncateStr(seller || "", 15)
+
+    const handleCardClick = () => {
+        isOwnedByUser ? setShowModal(true) : console.log("Lets Buy!")
+    }
+
     return (
         <div>
             <div>
                 {imageURI ? (
-                    <Card title={tokenName} description={tokenDescription}>
-                        <div className="p-2">
-                            <div className="flex flex-col items-end gap-2">
-                                <div>#{tokenId}</div>
-                                <div className="italic text-sm">
-                                    Owned by {seller}
-                                </div>
-                                <Image
-                                    loader={() => imageURI}
-                                    src={imageURI}
-                                    height="200"
-                                    width="200"
-                                />
-                                <div className="font-bold">
-                                    price:{" "}
-                                    {ethers.utils.formatUnits(price, "ether")}{" "}
-                                    ETH{" "}
+                    <div>
+                        <UpdateListingModal
+                            isVisible={showModal}
+                            nftAddress={nftAddress}
+                            tokenId={tokenId}
+                            marketplaceAddress={marketplaceAddress}
+                            onClose={hideModal}
+                        />
+                        <Card
+                            title={tokenName}
+                            description={tokenDescription}
+                            onClick={handleCardClick}
+                        >
+                            <div className="p-2">
+                                <div className="flex flex-col items-end gap-2">
+                                    <div>#{tokenId}</div>
+                                    <div className="italic text-sm">
+                                        Owned by {formattedSellerAddress}
+                                    </div>
+                                    <Image
+                                        loader={() => imageURI}
+                                        src={imageURI}
+                                        height="200"
+                                        width="200"
+                                    />
+                                    <div className="font-bold">
+                                        price:{" "}
+                                        {ethers.utils.formatUnits(
+                                            price,
+                                            "ether"
+                                        )}{" "}
+                                        ETH{" "}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                        </Card>
+                    </div>
                 ) : (
                     <div>Loading...</div>
                 )}
